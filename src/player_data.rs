@@ -68,12 +68,6 @@ impl AnimeGameData {
             .ok_or_else(|| anyhow::anyhow!("Material not found"))
     }
 
-    pub fn get_skill_type(&self, id: u32) -> Result<&String> {
-        self.text_map
-            .get(&id.to_string())
-            .ok_or_else(|| anyhow::anyhow!("Skill not found"))
-    }
-
     pub fn get_property(&self, id: u32) -> Result<&String> {
         self.text_map
             .get(&id.to_string())

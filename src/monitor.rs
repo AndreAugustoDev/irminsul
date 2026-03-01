@@ -15,7 +15,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::capture::PacketCapture;
 use crate::player_data::{AnimeGameData, PlayerData};
-use crate::{APP_ID, AppState, ConfirmationType, DataUpdated, Message, State};
+use crate::{APP_ID, AppState, DataUpdated, Message, State};
 
 struct AppStateManager {
     app_state: AppState,

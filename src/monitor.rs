@@ -3,7 +3,6 @@ use std::fs;
 use std::io::{BufWriter, Write};
 use std::time::Instant;
 
-use anime_game_data::AnimeGameData;
 use anyhow::{Context, Result, anyhow};
 use auto_artifactarium::{
     GameCommand, GamePacket, GameSniffer, matches_achievement_packet, matches_avatar_packet,
@@ -15,7 +14,7 @@ use tokio::sync::{mpsc, watch};
 use tokio_util::sync::CancellationToken;
 
 use crate::capture::PacketCapture;
-use crate::player_data::PlayerData;
+use crate::player_data::{PlayerData, AnimeGameData};
 use crate::{APP_ID, AppState, ConfirmationType, DataUpdated, Message, State};
 
 struct AppStateManager {
@@ -61,11 +60,11 @@ pub struct Monitor {
 impl Monitor {
     pub async fn new(
         state_tx: watch::Sender<AppState>,
-        mut ui_message_rx: mpsc::UnboundedReceiver<Message>,
+        ui_message_rx: mpsc::UnboundedReceiver<Message>,
         log_packet_rx: watch::Receiver<bool>,
     ) -> Result<Self> {
-        let mut app_state = AppStateManager::new(state_tx.borrow().clone(), state_tx.clone());
-        let game_data = get_database(&mut app_state, &mut ui_message_rx).await?;
+        let app_state = AppStateManager::new(state_tx.borrow().clone(), state_tx.clone());
+        let game_data = get_database().await?;
         let player_data = PlayerData::new(game_data);
         let keys = load_keys()?;
         let sniffer = GameSniffer::new().set_initial_keys(keys);
@@ -168,32 +167,12 @@ impl Monitor {
     }
 }
 
-async fn get_database(
-    app_state: &mut AppStateManager,
-    ui_message_rx: &mut mpsc::UnboundedReceiver<Message>,
-) -> Result<AnimeGameData> {
-    app_state.update_app_state(State::CheckingForData);
-
+async fn get_database() -> Result<AnimeGameData> {
     let mut storage_dir = eframe::storage_dir(APP_ID).unwrap();
-    storage_dir.push("data_cache.json");
+    storage_dir.push("cache");
+    storage_dir.push("TextMap.json");
 
-    let mut db = anime_game_data::AnimeGameData::new_with_cache(&storage_dir).unwrap();
-    if db.needs_update().await? {
-        let confirmation_type = if db.has_data() {
-            ConfirmationType::Update
-        } else {
-            ConfirmationType::Initial
-        };
-        app_state.update_app_state(State::WaitingForDownloadConfirmation(confirmation_type));
-
-        while let Some(msg) = ui_message_rx.recv().await {
-            if matches!(msg, Message::DownloadAcknowledged) {
-                app_state.update_app_state(State::Downloading);
-                db.update().await?;
-                break;
-            }
-        }
-    }
+    let db = AnimeGameData::new(&storage_dir)?;
 
     Ok(db)
 }
@@ -206,10 +185,10 @@ async fn capture_task(
         PacketCapture::new().map_err(|e| anyhow!("Error creating packet capture: {e}"))?;
     tracing::info!("starting capture");
     loop {
-        let packet = tokio::select!(
+        let packet = tokio::select! {
             packet = capture.next_packet() => packet,
             _ = cancel_token.cancelled() => break,
-        );
+        };
         let packet = match packet {
             Ok(packet) => packet,
             Err(e) => {

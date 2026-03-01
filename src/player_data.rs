@@ -1,6 +1,7 @@
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 
-use anime_game_data::{AnimeGameData, Property, SkillType};
 use anyhow::Result;
 pub use auto_artifactarium::Achievement;
 pub use auto_artifactarium::r#gen::protos::{AvatarInfo, Item};
@@ -28,6 +29,48 @@ pub struct ExportSettings {
     pub min_weapon_refinement: u32,
     pub min_weapon_ascension: u32,
     pub min_weapon_rarity: u32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AnimeGameData {
+    #[serde(rename = "textMap")]
+    pub text_map: HashMap<String, String>,
+}
+
+impl AnimeGameData {
+    pub fn new(path: &Path) -> Result<Self> {
+        let json = fs::read_to_string(path)?;
+        let data = serde_json::from_str(&json)?;
+        Ok(data)
+    }
+
+    pub fn get_character(&self, id: u32) -> Result<&String> {
+        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Character not found"))
+    }
+
+    pub fn get_artifact(&self, id: u32) -> Result<&String> {
+        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Artifact not found"))
+    }
+
+    pub fn get_weapon(&self, id: u32) -> Result<&String> {
+        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Weapon not found"))
+    }
+
+    pub fn get_material(&self, id: u32) -> Result<&String> {
+        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Material not found"))
+    }
+
+    pub fn get_skill_type(&self, id: u32) -> Result<&String> {
+        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Skill not found"))
+    }
+
+    pub fn get_property(&self, id: u32) -> Result<&String> {
+        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Property not found"))
+    }
+
+    pub fn get_affix(&self, id: u32) -> Result<&String> {
+        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Affix not found"))
+    }
 }
 
 pub struct PlayerData {
@@ -126,17 +169,6 @@ impl PlayerData {
                 let mut skill = 1;
                 let mut burst = 1;
 
-                for (id, level) in &character.skill_level_map {
-                    let Some(ty) = self.game_data.get_skill_type(*id).ok() else {
-                        continue;
-                    };
-                    match ty {
-                        SkillType::Auto => auto = *level,
-                        SkillType::Skill => skill = *level,
-                        SkillType::Burst => burst = *level,
-                    }
-                }
-
                 if level < settings.min_character_level
                     || ascension < settings.min_character_ascension
                     || constellation < settings.min_character_constellation
@@ -153,15 +185,6 @@ impl PlayerData {
                 })
             })
             .collect()
-    }
-
-    pub fn round(property: Property, value: f32) -> f32 {
-        // The game rounds percentages to 0.1 and non percentages to whole numbers.
-        if property.is_percentage() {
-            (value * 10.).round() / 10.
-        } else {
-            value.round()
-        }
     }
 
     pub fn export_genshin_optimizer_artifacts(
@@ -191,22 +214,22 @@ impl PlayerData {
                 }
                 let artifact_data = self.game_data.get_artifact(item.item_id).ok()?;
                 let artifact = equip.reliquary();
-                let mut substats: IndexMap<Property, (f32, f32)> = IndexMap::new();
+                let mut substats: IndexMap<String, (f32, f32)> = IndexMap::new();
                 for substat_id in artifact.append_prop_id_list.iter() {
                     let Some(substat) = self.game_data.get_affix(*substat_id).ok() else {
                         continue;
                     };
                     let entry = substats
-                        .entry(substat.property)
-                        .or_insert((0., substat.value as f32));
-                    entry.0 += substat.value as f32;
+                        .entry(substat.to_string())
+                        .or_insert((0., 0.));
+                    entry.0 += 0.;
                 }
                 let substats = substats
                     .into_iter()
                     .map(|(property, (value, initial_value))| good::Substat {
-                        key: property.good_name().to_string(),
-                        value: Self::round(property, value),
-                        initial_value: Self::round(property, initial_value),
+                        key: property.to_string(),
+                        value: value,
+                        initial_value: initial_value,
                     })
                     .collect();
                 let unactivated_substats = artifact
@@ -215,32 +238,30 @@ impl PlayerData {
                     .filter_map(|substat_id| {
                         let substat = self.game_data.get_affix(*substat_id).ok()?;
                         Some(good::Substat {
-                            key: substat.property.good_name().to_string(),
-                            value: Self::round(substat.property, substat.value as f32),
-                            initial_value: Self::round(substat.property, substat.value as f32),
+                            key: substat.to_string(),
+                            value: 0.,
+                            initial_value: 0.,
                         })
                     })
                     .collect();
                 let total_rolls = artifact.append_prop_id_list.len() as u32;
 
                 let level = artifact.level - 1;
-                let rarity = artifact_data.rarity;
+                let rarity = 5;
                 let astral_mark = artifact.starred;
                 let elixer_crafted = !artifact.elixer_choices.is_empty();
                 let main_stat_key = self
                     .game_data
                     .get_property(artifact.main_prop_id)
-                    .ok()?
-                    .good_name()
-                    .to_string();
+                    .ok()?.to_string();
 
                 if level < settings.min_artifact_level || rarity < settings.min_artifact_rarity {
                     return None;
                 }
 
                 Some(good::Artifact {
-                    set_key: good::to_good_key(&artifact_data.set),
-                    slot_key: artifact_data.slot.good_name().to_string(),
+                    set_key: good::to_good_key(&artifact_data),
+                    slot_key: artifact_data.to_string(),
                     level,
                     rarity,
                     main_stat_key,
@@ -293,13 +314,13 @@ impl PlayerData {
                 if level < settings.min_weapon_level
                     || refinement < settings.min_weapon_refinement
                     || ascension < settings.min_weapon_ascension
-                    || weapon_data.rarity < settings.min_weapon_rarity
+                    || 5 < settings.min_weapon_rarity
                 {
                     return None;
                 }
 
                 Some(good::Weapon {
-                    key: good::to_good_key(&weapon_data.name),
+                    key: good::to_good_key(&weapon_data),
                     level,
                     ascension,
                     refinement,

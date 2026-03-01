@@ -32,50 +32,47 @@ pub struct ExportSettings {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct AnimeGameData {
-    #[serde(rename = "textMap")]
-    pub text_map: HashMap<String, String>,
-}
+pub struct AnimeGameData(HashMap<String, String>);
 
 impl AnimeGameData {
     pub fn new(path: &Path) -> Result<Self> {
         let json = fs::read_to_string(path)?;
         let data = serde_json::from_str(&json)?;
-        Ok(data)
+        Ok(Self(data))
     }
 
     pub fn get_character(&self, id: u32) -> Result<&String> {
-        self.text_map
+        self.0
             .get(&id.to_string())
             .ok_or_else(|| anyhow::anyhow!("Character not found"))
     }
 
     pub fn get_artifact(&self, id: u32) -> Result<&String> {
-        self.text_map
+        self.0
             .get(&id.to_string())
             .ok_or_else(|| anyhow::anyhow!("Artifact not found"))
     }
 
     pub fn get_weapon(&self, id: u32) -> Result<&String> {
-        self.text_map
+        self.0
             .get(&id.to_string())
             .ok_or_else(|| anyhow::anyhow!("Weapon not found"))
     }
 
     pub fn get_material(&self, id: u32) -> Result<&String> {
-        self.text_map
+        self.0
             .get(&id.to_string())
             .ok_or_else(|| anyhow::anyhow!("Material not found"))
     }
 
     pub fn get_property(&self, id: u32) -> Result<&String> {
-        self.text_map
+        self.0
             .get(&id.to_string())
             .ok_or_else(|| anyhow::anyhow!("Property not found"))
     }
 
     pub fn get_affix(&self, id: u32) -> Result<&String> {
-        self.text_map
+        self.0
             .get(&id.to_string())
             .ok_or_else(|| anyhow::anyhow!("Affix not found"))
     }

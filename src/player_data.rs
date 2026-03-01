@@ -179,9 +179,9 @@ impl PlayerData {
                 let ascension = character.prop_map.get(&1002).map(|prop| prop.val as u32)?;
                 let constellation = character.talent_id_list.len() as u32;
 
-                let mut auto = 1;
-                let mut skill = 1;
-                let mut burst = 1;
+                let auto = 1;
+                let skill = 1;
+                let burst = 1;
 
                 if level < settings.min_character_level
                     || ascension < settings.min_character_ascension
@@ -240,8 +240,8 @@ impl PlayerData {
                     .into_iter()
                     .map(|(property, (value, initial_value))| good::Substat {
                         key: property.to_string(),
-                        value: value,
-                        initial_value: initial_value,
+                        value,
+                        initial_value,
                     })
                     .collect();
                 let unactivated_substats = artifact
@@ -273,7 +273,7 @@ impl PlayerData {
                 }
 
                 Some(good::Artifact {
-                    set_key: good::to_good_key(&artifact_data),
+                    set_key: good::to_good_key(artifact_data),
                     slot_key: artifact_data.to_string(),
                     level,
                     rarity,
@@ -333,7 +333,7 @@ impl PlayerData {
                 }
 
                 Some(good::Weapon {
-                    key: good::to_good_key(&weapon_data),
+                    key: good::to_good_key(weapon_data),
                     level,
                     ascension,
                     refinement,

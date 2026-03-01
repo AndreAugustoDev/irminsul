@@ -45,31 +45,45 @@ impl AnimeGameData {
     }
 
     pub fn get_character(&self, id: u32) -> Result<&String> {
-        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Character not found"))
+        self.text_map
+            .get(&id.to_string())
+            .ok_or_else(|| anyhow::anyhow!("Character not found"))
     }
 
     pub fn get_artifact(&self, id: u32) -> Result<&String> {
-        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Artifact not found"))
+        self.text_map
+            .get(&id.to_string())
+            .ok_or_else(|| anyhow::anyhow!("Artifact not found"))
     }
 
     pub fn get_weapon(&self, id: u32) -> Result<&String> {
-        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Weapon not found"))
+        self.text_map
+            .get(&id.to_string())
+            .ok_or_else(|| anyhow::anyhow!("Weapon not found"))
     }
 
     pub fn get_material(&self, id: u32) -> Result<&String> {
-        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Material not found"))
+        self.text_map
+            .get(&id.to_string())
+            .ok_or_else(|| anyhow::anyhow!("Material not found"))
     }
 
     pub fn get_skill_type(&self, id: u32) -> Result<&String> {
-        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Skill not found"))
+        self.text_map
+            .get(&id.to_string())
+            .ok_or_else(|| anyhow::anyhow!("Skill not found"))
     }
 
     pub fn get_property(&self, id: u32) -> Result<&String> {
-        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Property not found"))
+        self.text_map
+            .get(&id.to_string())
+            .ok_or_else(|| anyhow::anyhow!("Property not found"))
     }
 
     pub fn get_affix(&self, id: u32) -> Result<&String> {
-        self.text_map.get(&id.to_string()).ok_or_else(|| anyhow::anyhow!("Affix not found"))
+        self.text_map
+            .get(&id.to_string())
+            .ok_or_else(|| anyhow::anyhow!("Affix not found"))
     }
 }
 
@@ -219,9 +233,7 @@ impl PlayerData {
                     let Some(substat) = self.game_data.get_affix(*substat_id).ok() else {
                         continue;
                     };
-                    let entry = substats
-                        .entry(substat.to_string())
-                        .or_insert((0., 0.));
+                    let entry = substats.entry(substat.to_string()).or_insert((0., 0.));
                     entry.0 += 0.;
                 }
                 let substats = substats
@@ -253,7 +265,8 @@ impl PlayerData {
                 let main_stat_key = self
                     .game_data
                     .get_property(artifact.main_prop_id)
-                    .ok()?.to_string();
+                    .ok()?
+                    .to_string();
 
                 if level < settings.min_artifact_level || rarity < settings.min_artifact_rarity {
                     return None;
